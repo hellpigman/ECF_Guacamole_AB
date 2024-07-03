@@ -53,16 +53,16 @@
 			bind_port = 4822
 	- sudo systemctl restart tomcat9 guacd mariadb
 
+--------------------------------------------------------------------------------
 
 - DEBIAN GUACAMOLE - CONFIG RESEAU :
 	- /etc/network/interfaces :
+       ```
   		source /etc/network/interfaces.d/*
   		
-  		# The loopback network interface
   		auto lo
   		iface lo inet loopback
   		
-  		# Acces internet
   		auto ens33
   		iface ens33 inet dhcp
   		    address 192.168.41.139
@@ -70,7 +70,6 @@
   		    gateway 192.168.41.2
   		    dns-nameservers 8.8.8.8 8.8.4.4
   		
-  		# Sous réseau 1
   		auto ens36
   		iface ens36 inet static
   		    address 10.200.10.200
@@ -78,7 +77,8 @@
 	-  Pare feu pour empécher l'accès au réseau local de l'interface ens33 depuis le réseau de l'interface ens36 :
 		- sudo apt-get install iptables
 		- sudo nano /etc/iptables_rules.sh
-			  !/bin/bash
+    ```
+			  	!/bin/bash
 				iptables -F
 		
 				iptables -X
@@ -117,9 +117,11 @@
 		- sudo sh -c "iptables-save > /etc/iptables/rules.v4"
 
 
-Réseau 0 -> 192.168.41.0/24 (accès internet)
-Réseau 1 -> 10.200.10.0/24
-Réseau 2 -> 10.200.20.0/24
+- Réseau 0 -> 192.168.41.0/24 (accès internet)
+- Réseau 1 -> 10.200.10.0/24
+- Réseau 2 -> 10.200.20.0/24
+- 
+--------------------------------------------------------------------------------
 
 - Installation de Proxmox sur VMware dans le sous réseau 1
 - création des sous réseaux relié aux interfaces VMWare
@@ -131,7 +133,7 @@ Réseau 2 -> 10.200.20.0/24
 - Toutes les adresses ip des machines sont mise en static
 - conversion des différentes machines en template pour automatisation via Terraform
 
-
+--------------------------------------------------------------------------------
 
 - LINUX CLIENT GUACAMOLE
 	- apt install openssh-server
@@ -173,3 +175,4 @@ Réseau 2 -> 10.200.20.0/24
 
 ![[Pasted image 20240703112126.png]]
 
+--------------------------------------------------------------------------------
