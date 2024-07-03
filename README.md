@@ -120,16 +120,17 @@
 - Réseau 0 -> 192.168.41.0/24 (accès internet)
 - Réseau 1 -> 10.200.10.0/24
 - Réseau 2 -> 10.200.20.0/24
-- 
+
 --------------------------------------------------------------------------------
 
 - Installation de Proxmox sur VMware dans le sous réseau 1
 - création des sous réseaux relié aux interfaces VMWare
-	![[Pasted image 20240703121520.png]]
+- ![screenshot](image/image1.png)
+
 - installation des différentes machines avec client guacamole
-	![[Pasted image 20240703110911.png]]
-	L1 = Réseau 1 (vmbr0)
-	L2 = Réseau 2 (vmbr1)
+- ![screenshot](image/image3.png)
+	- L1 = Réseau 1 (vmbr0)
+	- L2 = Réseau 2 (vmbr1)
 - Toutes les adresses ip des machines sont mise en static
 - conversion des différentes machines en template pour automatisation via Terraform
 
@@ -173,6 +174,126 @@
 		- Time zone : Europe - Paris
 		- Performance : cocher les 6 premières cases
 
-![[Pasted image 20240703112126.png]]
+- ![screenshot](image/image2.png)
 
 --------------------------------------------------------------------------------
+
+- Terraform avec ProxMox :
+	- création des droit TerraformProv :
+		- pveum role add TerraformProv -privs "Datastore.Allocate Datastore.AllocateSpace Datastore.Audit Pool.Allocate Sys.Audit Sys.Console Sys.Modify VM.Allocate VM.Audit VM.Clone VM.Config.CDROM VM.Config.Cloudinit VM.Config.CPU VM.Config.Disk VM.Config.HWType VM.Config.Memory VM.Config.Network VM.Config.Options VM.Console VM.Migrate VM.Monitor VM.PowerMgmt SDN.Use"```
+	- création de l'utilisateur et attribution des droits:
+		- pveum user add terraform-prov@pve --password <password>```
+		- pveum aclmod / -user terraform-prov@pve -role TerraformProv```
+	- création du token d'identification :
+		- pveum user token add terraform-prov@pve terraform-token --privsep=0
+		```
+  		┌──────────────┬──────────────────────────────────────┐
+		│ key          │ value                                │
+		╞══════════════╪══════════════════════════════════════╡
+		│ full-tokenid │ terraform-prov@pve!terraform-token   │
+		├──────────────┼──────────────────────────────────────┤
+		│ info         │ {"privsep":"0"}                      │
+		├──────────────┼──────────────────────────────────────┤
+		│ value        │ XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX │
+		└──────────────┴──────────────────────────────────────┘
+   		```
+	- installation de Terraform sur mon PC (powershell admin) :
+		- choco install terraform
+	- Création du fichier Terraform.gitignore dans le dossier consacré à Terraform :
+		- https://github.com/github/gitignore/blob/main/Terraform.gitignore?ref=tcude.net
+	- Création du fichier des variables (variables.tf) : 
+		```
+		variable "ssh_key" {
+		  default = "CLÉ SSH"
+		}
+		
+		variable "virtual_environment_endpoint" {
+		  default = "https://10.200.10.199:8006"
+		}
+		
+		variable "virtual_environment_token" {
+		  default = "terraform-prov@pve!terraform-token=XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX"
+		}
+		```
+	- Création du fichier provider (provider.tf) : 
+		```
+				terraform {
+		  required_providers {
+		    proxmox = {
+		      source = "bpg/proxmox"
+		      version = "0.60.1"
+		    }
+		  }
+		}
+		
+		provider "proxmox" {
+		  endpoint = var.virtual_environment_endpoint
+		  api_token = var.virtual_environment_token
+		  insecure = true
+		    ssh {
+		    agent    = true
+		    username = "terraform-prov"
+		  }
+		}
+		```
+	- création de fichier principale (main.tf) :
+		```
+  		resource "proxmox_virtual_environment_vm" "ecf_debian" {
+		  name      = "Debian"
+		  node_name = "pve"
+		
+		  clone {
+		    vm_id = 100
+			full = true
+		  }
+		}
+		
+		resource "proxmox_virtual_environment_vm" "ecf_windows11" {
+		  name      = "Windows11"
+		  node_name = "pve"
+		
+		  clone {
+		    vm_id = 101
+			full = true
+		  }
+		}
+		
+		resource "proxmox_virtual_environment_vm" "ecf_ubuntu" {
+		  name      = "Ubuntu"
+		  node_name = "pve"
+		
+		  clone {
+		    vm_id = 102
+			full = true
+		  }
+		}
+		
+		resource "proxmox_virtual_environment_vm" "ecf_windows10" {
+		  name      = "Windows10"
+		  node_name = "pve"
+		
+		  clone {
+		    vm_id = 103
+			full = true
+		  }
+		}
+		
+		resource "proxmox_virtual_environment_vm" "ecf_kali" {
+		  name      = "Main_Kali"
+		  node_name = "pve"
+		
+		  clone {
+		    vm_id = 104
+			full = true
+		  }
+		}
+		```
+	- Initialisation de Terraform :
+		- ```terraform init``` dans le dossier avec les fichier de configuration terraform via un powershell en admin
+	- Création du fichier "plan" pour voir les modification/création qui vont être apporté par Terraform :
+		- terraform plan -out plan
+		- ```terraform apply plan``` pour appliquer le plan créé
+
+- Pour lancer les VM configuré, il faut utiliser la commande ```terraform apply``` et pour les éteindres ```terraform destroy```
+
+# L'environnement ce lance désormais automatiquement et toutes les machines virtuelles sont utilisable depuis guacamole
